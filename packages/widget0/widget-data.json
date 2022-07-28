@@ -1,0 +1,131 @@
+{
+  "$schema": "http://json-schema.org/schema",
+  "$ref": "#/definitions/WidgetData",
+  "definitions": {
+    "WidgetData": {
+      "properties": {
+        "tags": { "$ref": "#/definitions/WidgetTagArray" },
+        "parameters": {
+          "patternProperties": { ".*": { "$ref": "#/definitions/WidgetType" } }
+        },
+        "body": { "$ref": "#/definitions/WidgetValue" }
+      },
+      "required": ["tags", "parameters", "body"]
+    },
+
+    "WidgetTag": {
+      "oneOf": [
+        { "type": "string" },
+        { "type": "array", "items": { "type": "string" }, "minItems": 1 }
+      ]
+    },
+    "WidgetTagArray": {
+      "type": "array",
+      "items": { "$ref": "#/definitions/WidgetTag" },
+      "minItems": 1
+    },
+
+    "AnyType": {
+      "properties": { "type": { "const": "any" } },
+      "required": ["type"],
+      "additionalProperties": false
+    },
+    "LiteralType": {
+      "properties": {
+        "type": { "enum": ["boolean", "number", "string", "symbol"] }
+      },
+      "required": ["type"],
+      "additionalProperties": false
+    },
+    "ArrayType": {
+      "properties": {
+        "type": { "const": "array" },
+        "items": { "$ref": "#/definitions/WidgetType" }
+      },
+      "required": ["type", "items"],
+      "additionalProperties": false
+    },
+    "WidgetType": {
+      "oneOf": [
+        { "$ref": "#/definitions/AnyType" },
+        { "$ref": "#/definitions/LiteralType" },
+        { "$ref": "#/definitions/ArrayType" }
+      ]
+    },
+
+    "WidgetDirect": {
+      "properties": {
+        "direct": {
+          "oneOf": [
+            { "type": "boolean" },
+            { "type": "number" },
+            { "type": "string" }
+          ]
+        }
+      },
+      "required": ["direct"],
+      "additionalProperties": false
+    },
+    "WidgetTuple": {
+      "properties": {
+        "items": {
+          "type": "array",
+          "items": { "$ref": "#/definitions/WidgetValue" }
+        }
+      },
+      "required": ["items"],
+      "additionalProperties": false
+    },
+    "WidgetShape": {
+      "properties": {
+        "shape": {
+          "patternProperties": { ".*": { "$ref": "#/definitions/WidgetValue" } }
+        }
+      },
+      "required": ["shape"],
+      "additionalProperties": false
+    },
+    "WidgetParameter": {
+      "properties": { "parameter": { "type": "string" } },
+      "required": ["parameter"],
+      "additionalProperties": false
+    },
+    "WidgetProperty": {
+      "properties": {
+        "target": { "$ref": "#/definitions/WidgetValue" },
+        "property": { "type": "string" }
+      },
+      "required": ["target", "property"],
+      "additionalProperties": false
+    },
+    "WidgetMember": {
+      "properties": {
+        "target": { "$ref": "#/definitions/WidgetValue" },
+        "member": { "$ref": "#/definitions/WidgetValue" }
+      },
+      "required": ["target", "member"],
+      "additionalProperties": false
+    },
+    "WidgetRef": {
+      "properties": {
+        "tags": { "$ref": "#/definitions/WidgetTagArray" },
+        "parameters": {
+          "patternProperties": { ".*": { "$ref": "#/definitions/WidgetValue" } }
+        }
+      },
+      "required": ["tags", "parameters"],
+      "additionalProperties": false
+    },
+    "WidgetValue": {
+      "oneOf": [
+        { "$ref": "#/definitions/WidgetDirect" },
+        { "$ref": "#/definitions/WidgetTuple" },
+        { "$ref": "#/definitions/WidgetShape" },
+        { "$ref": "#/definitions/WidgetParameter" },
+        { "$ref": "#/definitions/WidgetProperty" },
+        { "$ref": "#/definitions/WidgetMember" },
+        { "$ref": "#/definitions/WidgetRef" }
+      ]
+    }
+  }
+}
