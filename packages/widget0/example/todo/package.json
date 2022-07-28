@@ -1,0 +1,9 @@
+{
+  "name": "todo",
+  "scripts": {
+    "build": "esbuild index.ts --bundle --outdir=build && cp index.html build/index.html"
+  },
+  "devDependencies": {
+    "esbuild": "^0.14.48"
+  }
+}

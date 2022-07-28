@@ -1,0 +1,62 @@
+[
+  ["add-todo"],
+  {
+    "parameters": {
+      "create": {
+        "type": "function",
+        "arguments": [{ "type": "object", "props": {} }],
+        "return": { "type": "void" }
+      }
+    },
+    "body": {
+      "tags": [["controller", "add-todo"]],
+      "parameters": {
+        "create": { "parameter": "create" },
+        "child": {
+          "argument": "todo",
+          "compute": {
+            "tags": ["container"],
+            "parameters": {
+              "children": {
+                "items": [
+                  {
+                    "tags": ["text-input"],
+                    "parameters": {
+                      "change": {
+                        "target": { "parameter": "todo" },
+                        "property": "setDescription"
+                      },
+                      "value": {
+                        "target": { "parameter": "todo" },
+                        "property": "description"
+                      }
+                    }
+                  },
+                  {
+                    "tags": ["button"],
+                    "parameters": {
+                      "click": {
+                        "target": { "parameter": "todo" },
+                        "property": "create"
+                      },
+                      "children": {
+                        "items": [
+                          {
+                            "tags": ["text"],
+                            "parameters": {
+                              "children": { "items": [{ "direct": "Add" }] }
+                            }
+                          }
+                        ]
+                      }
+                    }
+                  }
+                ]
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+]
