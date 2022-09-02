@@ -30,6 +30,11 @@
       "required": ["type"],
       "additionalProperties": false
     },
+    "VoidType": {
+      "properties": { "type": { "const": "void" } },
+      "required": ["type"],
+      "additionalProperties": false
+    },
     "LiteralType": {
       "properties": {
         "type": { "enum": ["boolean", "number", "string", "symbol"] }
@@ -40,16 +45,63 @@
     "ArrayType": {
       "properties": {
         "type": { "const": "array" },
-        "items": { "$ref": "#/definitions/WidgetType" }
+        "item": { "$ref": "#/definitions/WidgetType" }
+      },
+      "required": ["type", "item"],
+      "additionalProperties": false
+    },
+    "TupleType": {
+      "properties": {
+        "type": { "const": "array" },
+        "items": {
+          "type": "array",
+          "items": { "$ref": "#/definitions/WidgetType" }
+        }
       },
       "required": ["type", "items"],
+      "additionalProperties": false
+    },
+    "ObjectType": {
+      "properties": {
+        "type": { "const": "object" },
+        "props": {
+          "patternProperties": { ".*": { "$ref": "#/definitions/WidgetType" } }
+        }
+      },
+      "required": ["type", "props"],
+      "additionalProperties": false
+    },
+    "FunctionType": {
+      "properties": {
+        "type": { "const": "function" },
+        "arguments": {
+          "type": "array",
+          "items": { "$ref": "#/definitions/WidgetType" }
+        },
+        "return": { "$ref": "#/definitions/WidgetType" }
+      },
+      "required": ["type", "arguments", "return"],
+      "additionalProperties": false
+    },
+    "UnionType": {
+      "properties": {
+        "type": { "const": "union" },
+        "left": { "$ref": "#/definitions/WidgetType" },
+        "right": { "$ref": "#/definitions/WidgetType" }
+      },
+      "required": ["type", "left", "right"],
       "additionalProperties": false
     },
     "WidgetType": {
       "oneOf": [
         { "$ref": "#/definitions/AnyType" },
+        { "$ref": "#/definitions/VoidType" },
         { "$ref": "#/definitions/LiteralType" },
-        { "$ref": "#/definitions/ArrayType" }
+        { "$ref": "#/definitions/ArrayType" },
+        { "$ref": "#/definitions/TupleType" },
+        { "$ref": "#/definitions/ObjectType" },
+        { "$ref": "#/definitions/FunctionType" },
+        { "$ref": "#/definitions/UnionType" }
       ]
     },
 
@@ -106,6 +158,56 @@
       "required": ["target", "member"],
       "additionalProperties": false
     },
+    "WidgetComparison": {
+      "properties": {
+        "operator": {
+          "enum": [
+            "equals",
+            "greaterThan",
+            "lessThan",
+            "greaterThanEquals",
+            "lessThanEquals"
+          ]
+        },
+        "left": { "$ref": "#/definitions/WidgetValue" },
+        "right": { "$ref": "#/definitions/WidgetValue" }
+      },
+      "required": ["operator", "left", "right"],
+      "additionalProperties": false
+    },
+    "WidgetCondition": {
+      "properties": {
+        "condition": { "$ref": "#/definitions/WidgetValue" },
+        "ifTrue": { "$ref": "#/definitions/WidgetValue" },
+        "ifFalse": { "$ref": "#/definitions/WidgetValue" }
+      },
+      "required": ["condition", "ifTrue", "ifFalse"],
+      "additionalProperties": false
+    },
+    "WidgetMap": {
+      "properties": {
+        "target": { "$ref": "#/definitions/WidgetValue" },
+        "argument": { "type": "string" },
+        "map": { "$ref": "#/definitions/WidgetValue" }
+      },
+      "required": ["target", "argument", "map"],
+      "additionalProperties": false
+    },
+    "WidgetCompute": {
+      "properties": {
+        "argument": { "type": "string" },
+        "compute": { "$ref": "#/definitions/WidgetValue" }
+      },
+      "required": ["argument", "compute"],
+      "additionalProperties": false
+    },
+    "WidgetDefer": {
+      "properties": {
+        "defer": { "$ref": "#/definitions/WidgetValue" }
+      },
+      "required": ["defer"],
+      "additionalProperties": false
+    },
     "WidgetRef": {
       "properties": {
         "tags": { "$ref": "#/definitions/WidgetTagArray" },
@@ -124,6 +226,11 @@
         { "$ref": "#/definitions/WidgetParameter" },
         { "$ref": "#/definitions/WidgetProperty" },
         { "$ref": "#/definitions/WidgetMember" },
+        { "$ref": "#/definitions/WidgetComparison" },
+        { "$ref": "#/definitions/WidgetCondition" },
+        { "$ref": "#/definitions/WidgetMap" },
+        { "$ref": "#/definitions/WidgetCompute" },
+        { "$ref": "#/definitions/WidgetDefer" },
         { "$ref": "#/definitions/WidgetRef" }
       ]
     }

@@ -19,8 +19,9 @@ import {
   WidgetValue,
   WidgetComputeValue,
   WidgetDeferValue,
+  WidgetType,
 } from ".";
-import { WidgetType } from "WidgetLiteralType";
+// import { WidgetType } from "WidgetLiteralType";
 
 function containsTagString(tags: WidgetTagArray, tag: string) {
   for (let i = 0; i < tags.length; i++) {
@@ -76,6 +77,13 @@ function equalWidgetTags(left: WidgetTagArray, right: WidgetTagArray) {
   return true;
 }
 
+export class TagIndex<E> {
+  constructor() {}
+  addEntry(tags: WidgetTagArray, entry: E) {}
+  removeEntry(entry: E) {}
+  search() {}
+}
+
 export class WidgetDatabaseMap implements WidgetDatabase {
   constructor(private map: Map<WidgetTagArray, WidgetData>) {}
   async *search(id: WidgetTagArray): AsyncIterable<WidgetData> {
@@ -122,7 +130,7 @@ export class WidgetFoundationGroup<T> implements WidgetFoundation<T> {
 }
 
 export function isWidgetType(
-  value: WidgetValue | WidgetType
+  value: WidgetValue | WidgetType,
 ): value is WidgetType {
   return "type" in value;
 }
@@ -140,13 +148,13 @@ export function isWidgetObject(value: WidgetValue): value is WidgetShapeValue {
 }
 
 export function isWidgetParameter(
-  value: WidgetValue
+  value: WidgetValue,
 ): value is WidgetParameterValue {
   return "parameter" in value;
 }
 
 export function isWidgetProperty(
-  value: WidgetValue
+  value: WidgetValue,
 ): value is WidgetPropertyValue {
   return "property" in value;
 }
@@ -156,13 +164,13 @@ export function isWidgetMember(value: WidgetValue): value is WidgetMemberValue {
 }
 
 export function isWidgetComparison(
-  value: WidgetValue
+  value: WidgetValue,
 ): value is WidgetComparisonValue {
   return "operator" in value;
 }
 
 export function isWidgetCondition(
-  value: WidgetValue
+  value: WidgetValue,
 ): value is WidgetConditionValue {
   return "ifTrue" in value;
 }
@@ -172,14 +180,14 @@ export function isWidgetMap(value: WidgetValue): value is WidgetMapValue {
 }
 
 export function isWidgetCompute(
-  value: WidgetValue
+  value: WidgetValue,
 ): value is WidgetComputeValue {
   return "compute" in value;
 }
 
-export function isWidgetDefer(value: WidgetValue): value is WidgetDeferValue {
-  return "defer" in value;
-}
+// export function isWidgetDefer(value: WidgetValue): value is WidgetDeferValue {
+//   return "defer" in value;
+// }
 
 export function isWidgetRef(value: WidgetValue): value is WidgetRef {
   return "tags" in value;
@@ -211,8 +219,8 @@ export function* visitWidgetValue(value: WidgetValue): Generator<WidgetValue> {
     yield* visitWidgetValue(value.map);
   } else if (isWidgetCompute(value)) {
     yield* visitWidgetValue(value.compute);
-  } else if (isWidgetDefer(value)) {
-    yield* visitWidgetValue(value.defer);
+    // } else if (isWidgetDefer(value)) {
+    //   yield* visitWidgetValue(value.defer);
   } else if (isWidgetRef(value)) {
     for (const key in value.parameters) {
       yield* visitWidgetValue(value.parameters[key]);
@@ -240,7 +248,7 @@ interface WidgetPartialEvaluator<A extends any[]> {
   condition?(value: WidgetConditionValue, ...args: A): any;
   map?(value: WidgetMapValue, ...args: A): any;
   compute?(value: WidgetComputeValue, ...args: A): any;
-  defer?(value: WidgetDeferValue, ...args: A): any;
+  // defer?(value: WidgetDeferValue, ...args: A): any;
   value?(value: WidgetValue, ...args: A): any;
 }
 
@@ -256,14 +264,14 @@ interface WidgetEvaluator<A extends any[]> {
   condition(value: WidgetConditionValue, ...args: A): any;
   map(value: WidgetMapValue, ...args: A): any;
   compute(value: WidgetComputeValue, ...args: A): any;
-  defer(value: WidgetDeferValue, ...args: A): any;
+  // defer(value: WidgetDeferValue, ...args: A): any;
   value(value: WidgetValue, ...args: A): any;
 }
 
 type WidgetTransform<A extends any[]> = (value: WidgetValue, ...args: A) => any;
 
 export function buildWidgetComparison<A extends any[]>(
-  transform: WidgetTransform<A>
+  transform: WidgetTransform<A>,
 ): (value: WidgetComparisonValue, ...args: A) => any {
   return function (value, ...args) {
     switch (value.operator) {
@@ -288,7 +296,7 @@ export function buildWidgetComparison<A extends any[]>(
 }
 
 export function buildWidgetCondition<A extends any[]>(
-  transform: WidgetTransform<A>
+  transform: WidgetTransform<A>,
 ) {
   return function (value: WidgetConditionValue, ...args: A) {
     if (transform(value.condition, ...args)) {
@@ -299,21 +307,17 @@ export function buildWidgetCondition<A extends any[]>(
 }
 
 export function buildWidgetMap<
-  A extends [{ [key: string]: WidgetValue }, ...any[]]
+  A extends [{ [key: string]: WidgetValue }, ...any[]],
 >(transform: WidgetTransform<A>): (value: WidgetMapValue, ...args: A) => any {
   return function (value, params, ...args) {
-    return (transform as any)(value.target, params, ...args).map((item) =>
-      (transform as any)(
-        value.map,
-        { [value.argument]: item, ...params },
-        ...args
-      )
-    );
+    const targetValue = (transform as any)(value.target, params, ...args);
+    const mapValue = (transform as any)(value.map, params, ...args);
+    return targetValue.map((item) => mapValue(item));
   };
 }
 
 function buildWidgetValue<A extends any[]>(
-  fullTransform: WidgetEvaluator<A>
+  fullTransform: WidgetEvaluator<A>,
 ): WidgetTransform<A> {
   return function (value: WidgetValue, ...args: A) {
     if (isWidgetDirect(value)) {
@@ -336,8 +340,8 @@ function buildWidgetValue<A extends any[]>(
       return fullTransform.map(value, ...args);
     } else if (isWidgetCompute(value)) {
       return fullTransform.compute(value, ...args);
-    } else if (isWidgetDefer(value)) {
-      return fullTransform.defer(value, ...args);
+      // } else if (isWidgetDefer(value)) {
+      //   return fullTransform.defer(value, ...args);
     } else if (isWidgetRef(value)) {
       return fullTransform.ref(value, ...args);
     }
@@ -350,7 +354,7 @@ const notImplemented = () => {
 };
 
 export function buildWidgetEvaluator<A extends any[]>(
-  transform: WidgetPartialEvaluator<A>
+  transform: WidgetPartialEvaluator<A>,
 ): WidgetEvaluator<A> {
   const fullTransform: WidgetEvaluator<A> = {
     direct: notImplemented,
@@ -364,7 +368,7 @@ export function buildWidgetEvaluator<A extends any[]>(
     map: notImplemented,
     value: notImplemented,
     compute: notImplemented,
-    defer: notImplemented,
+    // defer: notImplemented,
     ...transform,
   };
   if (fullTransform.value === notImplemented) {
@@ -423,25 +427,14 @@ export function buildWidgetEvaluator<A extends any[]>(
   }
 
   if (fullTransform.compute === notImplemented) {
-    fullTransform.compute = ((value, ...args) => {
-      if (args.length > 0) {
-        const [params, ...paramsArgs] = args;
-        return (param) =>
-          (fullTransform.value as any)(
-            value.compute,
-            { ...params, [value.argument]: param },
-            ...paramsArgs
-          );
-      }
-      throw new Error("args.length === 0");
-    }) as (value: WidgetComputeValue, ...args: A) => any;
+    fullTransform.compute = buildWidgetCompute<A>(fullTransform);
   }
 
-  if (fullTransform.defer === notImplemented) {
-    fullTransform.defer = (value, ...args) => {
-      return () => fullTransform.value(value.defer, ...args);
-    };
-  }
+  // if (fullTransform.defer === notImplemented) {
+  //   fullTransform.defer = (value, ...args) => {
+  //     return () => fullTransform.value(value.defer, ...args);
+  //   };
+  // }
 
   return fullTransform;
 }
@@ -452,15 +445,35 @@ export class PickFirstWidgetData implements WidgetDataPicker {
   }
 }
 
+function buildWidgetCompute<A extends any[]>(
+  fullTransform: WidgetEvaluator<A>,
+): (value: WidgetComputeValue, ...args: A) => any {
+  return ((value, ...args) => {
+    if (args.length > 0) {
+      const [params, ...paramsArgs] = args;
+      return (...callParams) =>
+        (fullTransform.value as any)(
+          value.compute,
+          value.arguments.reduce(
+            (carry, arg, index) => ({ ...carry, [arg]: callParams[index] }),
+            params,
+          ),
+          ...paramsArgs,
+        );
+    }
+    throw new Error("args.length === 0");
+  }) as (value: WidgetComputeValue, ...args: A) => any;
+}
+
 export function pickWidget(widgets: WidgetData[], picker): WidgetData {
   return widgets.reduce((right, left) =>
-    picker.compare(left, right) <= 0 ? left : right
+    picker.compare(left, right) <= 0 ? left : right,
   );
 }
 
 export function pickFirstWidget(
   widgets: WidgetData[],
-  picker = new PickFirstWidgetData()
+  picker = new PickFirstWidgetData(),
 ) {
   return pickWidget(widgets, picker);
 }

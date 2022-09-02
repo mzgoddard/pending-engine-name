@@ -1,0 +1,26 @@
+{
+  "$schema": "../../../widget-data.json",
+  "tags": ["editor-slot"],
+  "parameters": {
+    "parameters": { "type": "any" },
+    "type": { "type": "any" },
+    "widget": { "type": "any" },
+    "setWidget": { "type": "any" }
+  },
+  "body": {
+    "tags": ["container"],
+    "parameters": {
+      "children": {
+        "items": [
+          {
+            "condition": {
+              "operator": "equals",
+              "left": { "parameter": "widget" },
+              "right": { "direct": "undefined" }
+            }
+          }
+        ]
+      }
+    }
+  }
+}

@@ -46,12 +46,11 @@ export interface WidgetConditionValue {
 
 export interface WidgetMapValue {
   target: WidgetValue;
-  argument: string;
-  map: WidgetValue;
+  map: WidgetComputeValue;
 }
 
 export interface WidgetComputeValue {
-  argument: string;
+  arguments: string[];
   compute: WidgetValue;
 }
 
@@ -59,11 +58,12 @@ export interface WidgetDeferValue {
   defer: WidgetValue;
 }
 
-export type WidgetTag = string | readonly [string, ...string[]];
+export type WidgetTag = readonly [string, ...string[]];
 
-export interface WidgetTagArray extends Array<WidgetTag> {}
+export interface WidgetTagArray extends ReadonlyArray<WidgetTag> {}
 
 export interface WidgetRef {
+  id: string;
   tags: WidgetTagArray;
   parameters: { [key: string]: WidgetValue };
 }
@@ -79,5 +79,4 @@ export type WidgetValue =
   | WidgetConditionValue
   | WidgetMapValue
   | WidgetComputeValue
-  | WidgetDeferValue
   | WidgetRef;

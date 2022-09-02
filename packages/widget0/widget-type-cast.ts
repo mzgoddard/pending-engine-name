@@ -1,6 +1,6 @@
 import {
   WidgetType,
-  WidgetLiteralType,
+  WidgetPrimitiveType,
   WidgetVoidType,
   WidgetAnyType,
   WidgetArrayType,
@@ -8,6 +8,7 @@ import {
   WidgetObjectType,
   WidgetFunctionType,
   WidgetUnionType,
+  WidgetDictType,
 } from "./widget-type";
 
 type FromWidgetTupleTypeItems<T extends readonly WidgetType[]> = T extends []
@@ -15,7 +16,7 @@ type FromWidgetTupleTypeItems<T extends readonly WidgetType[]> = T extends []
   : T extends [infer T2, ...infer TRest]
   ? [
       FromWidgetType<Extract<T2, WidgetType>>,
-      ...FromWidgetTupleTypeItems<Extract<TRest, readonly WidgetType[]>>
+      ...FromWidgetTupleTypeItems<Extract<TRest, readonly WidgetType[]>>,
     ]
   : never;
 type FromWidgetTupleType<T extends WidgetType> = T extends {
@@ -24,7 +25,7 @@ type FromWidgetTupleType<T extends WidgetType> = T extends {
   ? FromWidgetTupleTypeItems<Extract<I, readonly WidgetType[]>>
   : never;
 
-export type FromWidgetType<T extends WidgetType> = T extends WidgetLiteralType
+export type FromWidgetType<T extends WidgetType> = T extends WidgetPrimitiveType
   ? T extends { type: "boolean" }
     ? boolean
     : T extends { type: "number" }
@@ -44,6 +45,10 @@ export type FromWidgetType<T extends WidgetType> = T extends WidgetLiteralType
     : never
   : T extends WidgetTupleType
   ? FromWidgetTupleType<T>
+  : T extends WidgetDictType
+  ? T extends { values: infer T2 }
+    ? { [key: string]: FromWidgetType<Extract<T2, WidgetType>> }
+    : never
   : T extends WidgetObjectType
   ? T extends { props: infer TProps }
     ? {
@@ -69,3 +74,44 @@ export type FromWidgetType<T extends WidgetType> = T extends WidgetLiteralType
         | FromWidgetType<Extract<R, WidgetType>>
     : never
   : never;
+
+export type InferWidgetType<T> = T extends WidgetType
+  ? T
+  : T extends boolean
+  ? { type: "boolean" }
+  : T extends number
+  ? { type: "number" }
+  : T extends string
+  ? { type: "string" }
+  : T extends []
+  ? { type: "tuple"; items: [] }
+  : T extends [infer First, ...infer Rest]
+  ? {
+      type: "tuple";
+      items: [
+        InferWidgetType<First>,
+        ...Extract<InferWidgetType<Rest>["items"], any[]>,
+      ];
+    }
+  : T extends (infer I)[]
+  ? { type: "array"; items: InferWidgetType<I> }
+  : T extends (...args: infer Args) => infer Return
+  ? {
+      type: "func";
+      arguments: InferWidgetType<Args>["items"];
+      return: InferWidgetType<Return>;
+    }
+  : T extends { [key: string]: any }
+  ? string extends keyof T
+    ? { type: "dict"; values: InferWidgetType<T[any]> }
+    : { type: "object"; props: { [key in keyof T]: InferWidgetType<T[key]> } }
+  : T extends never
+  ? { type: "void" }
+  : T extends void
+  ? { type: "void" }
+  : { type: "any" };
+
+type A1 = InferWidgetType<[string, number, boolean]>;
+type A2 = InferWidgetType<(a: string, b: number) => void>;
+type A3 = InferWidgetType<{ [key: string]: number[] }>;
+type A4 = InferWidgetType<{ a: string; b: number }>;

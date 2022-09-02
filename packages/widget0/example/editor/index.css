@@ -1,0 +1,14 @@
+body,
+html {
+  margin: 0;
+}
+
+details {
+  border: 1px solid black;
+  border-radius: 3px;
+  padding-left: 0.5rem;
+}
+
+details > :not(summary) {
+  padding-left: 1rem;
+}

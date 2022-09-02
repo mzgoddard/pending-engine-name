@@ -1,0 +1,67 @@
+{
+  "$schema": "../../../widget-data.json",
+  "tags": ["editor-slot-pick"],
+  "parameters": {
+    "parameters": { "type": "any" },
+    "type": { "type": "any" },
+    "setWidget": { "type": "any" }
+  },
+  "body": {
+    "tags": ["container"],
+    "parameters": {
+      "children": {
+        "items": [
+          {
+            "tags": ["editor-slot-pick-direct"],
+            "parameters": {
+              "type": { "parameter": "type" },
+              "setWidget": { "parameter": "setWidget" }
+            }
+          },
+          {
+            "tags": ["editor-slot-pick-parameter"],
+            "parameters": {
+              "type": { "parameter": "type" },
+              "setWidget": { "parameter": "setWidget" }
+            }
+          },
+          {
+            "tags": ["editor-slot-pick-tuple"],
+            "parameters": {
+              "type": { "parameter": "type" },
+              "setWidget": { "parameter": "setWidget" }
+            }
+          },
+          {
+            "tags": ["editor-slot-pick-shape"],
+            "parameters": {
+              "type": { "parameter": "type" },
+              "setWidget": { "parameter": "setWidget" }
+            }
+          },
+          {
+            "tags": ["editor-slot-pick-compute"],
+            "parameters": {
+              "type": { "parameter": "type" },
+              "setWidget": { "parameter": "setWidget" }
+            }
+          },
+          {
+            "tags": ["editor-slot-pick-defer"],
+            "parameters": {
+              "type": { "parameter": "type" },
+              "setWidget": { "parameter": "setWidget" }
+            }
+          },
+          {
+            "tags": ["editor-slot-pick-ref"],
+            "parameters": {
+              "type": { "parameter": "type" },
+              "setWidget": { "parameter": "setWidget" }
+            }
+          }
+        ]
+      }
+    }
+  }
+}

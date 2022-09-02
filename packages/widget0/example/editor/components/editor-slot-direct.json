@@ -1,0 +1,22 @@
+{
+  "$schema": "../../../widget-data.json",
+  "tags": [["editor-slot", "direct"]],
+  "parameters": {
+    "parameters": { "type": "any" },
+    "type": { "type": "any" },
+    "widget": {
+      "type": "object",
+      "props": {
+        "direct": {
+          "type": "union",
+          "left": { "type": "string" },
+          "right": { "type": "number" }
+        }
+      }
+    }
+  },
+  "body": {
+    "tags": ["container"],
+    "parameters": { "children": { "items": [] } }
+  }
+}

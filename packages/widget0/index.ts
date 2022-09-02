@@ -2,7 +2,7 @@ import {
   WidgetAnyType,
   WidgetArrayType,
   WidgetFunctionType,
-  WidgetLiteralType,
+  WidgetPrimitiveType,
   WidgetObjectType,
   WidgetTupleType,
   WidgetType,
@@ -27,7 +27,11 @@ import {
   WidgetTupleValue,
   WidgetValue,
 } from "./widget-value";
-import { WidgetData } from "./widget-data";
+import {
+  WidgetData,
+  WidgetDataDefinition,
+  WidgetTypeParameters,
+} from "./widget-data";
 import { FromWidgetType } from "./widget-type-cast";
 import { TransformValue } from "./widget-value-cast";
 
@@ -36,7 +40,7 @@ export {
   WidgetAnyType,
   WidgetArrayType,
   WidgetFunctionType,
-  WidgetLiteralType,
+  WidgetPrimitiveType as WidgetLiteralType,
   WidgetObjectType,
   WidgetTupleType,
   WidgetType,
@@ -71,7 +75,7 @@ export {
 export { TransformValue };
 
 // Export "./widget-data".
-export { WidgetData };
+export { WidgetData, WidgetDataDefinition, WidgetTypeParameters };
 
 export interface WidgetDatabase {
   search(id: WidgetTagArray): AsyncIterable<WidgetData>;
@@ -94,7 +98,7 @@ interface WidgetSuggestions {
   suggestIdValue(
     id: WidgetTagArray,
     key: string,
-    value: string
+    value: string,
   ): Promise<string>;
   suggestParamKey(id: WidgetTagArray, paramKey: string): Promise<string>;
 }
@@ -108,9 +112,15 @@ export interface WidgetClass<T, P> {
 }
 
 export interface WidgetFoundationClass<
-  T,
-  P extends { [key: string]: WidgetType }
+  P extends WidgetTypeParameters,
+  R extends WidgetType,
 > {
+  readonly id?: string;
+  readonly description?: string;
+  readonly tags: WidgetTagArray;
   readonly parameters: P;
-  create(params: { [key in keyof P]: FromWidgetType<P[key]> }): T;
+  readonly return: R;
+  create(params: {
+    [key in keyof P]: FromWidgetType<P[key]>;
+  }): FromWidgetType<R>;
 }

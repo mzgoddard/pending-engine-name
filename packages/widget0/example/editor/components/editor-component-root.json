@@ -1,0 +1,6 @@
+{
+  "$schema": "../../../widget-data.json",
+  "tags": ["editor-component-root"],
+  "parameters": {},
+  "body": { "direct": true }
+}
