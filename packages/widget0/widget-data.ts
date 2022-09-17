@@ -29,11 +29,11 @@ export type WidgetDefinition =
 export function isDataDefinition(
   def: WidgetDefinition,
 ): def is WidgetDataDefinition {
-  return !("create" in def);
+  return def && !("create" in def);
 }
 
 export function isFoundationDefintion(
   def: WidgetDefinition,
 ): def is WidgetFoundationDefinition {
-  return "create" in def;
+  return def && "create" in def;
 }

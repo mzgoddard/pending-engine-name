@@ -2,21 +2,26 @@ import React, { ReactNode, useState } from "react";
 import { Link } from "react-router-dom";
 import {
   evalValueType,
+  fulfillsType,
   fulfillType,
   typeDefault,
   typeMemberType,
+  typeProperties,
 } from "../../../../fit-type";
 import {
+  isWidgetBoolean,
   isWidgetComparison,
   isWidgetCompute,
   isWidgetCondition,
   isWidgetDirect,
   isWidgetMap,
   isWidgetMember,
+  isWidgetNumber,
   isWidgetObject,
   isWidgetParameter,
   isWidgetProperty,
   isWidgetRef,
+  isWidgetString,
   isWidgetTuple,
 } from "../../../../level0";
 import {
@@ -25,6 +30,7 @@ import {
 } from "../../../../widget-data";
 import { WidgetTupleType, WidgetType } from "../../../../widget-type";
 import {
+  WidgetComparisonOperator,
   WidgetComputeValue,
   WidgetRef,
   WidgetTagArray,
@@ -32,9 +38,13 @@ import {
 } from "../../../../widget-value";
 
 import { useDatabase } from "../../database";
+import { ContextMenuItem, ContextMenuOrigin } from "./ContextMenu";
 import { InputModal } from "./InputModal";
+import { OrderButtonBar } from "./OrderButtonBar";
+import { State, StateContext, StateMachine } from "./StateMachine";
 
 import "./ValueSlot.css";
+import { widgetName } from "./widgetName";
 import { WidgetTagsInnerEditor } from "./WidgetTagsInnerEditor";
 
 type SetWidgetValue = (value: WidgetValue) => void;
@@ -76,61 +86,23 @@ export function ValueSlot({
         type.type;
         break;
     }
-    return (
-      <select
-        onChange={(ev) => {
-          const value = ev.target.value;
-          switch (ev.target.value) {
-            case "direct-boolean":
-              return setValue(typeDefault({ type: "boolean" }));
-            case "direct-string":
-              return setValue(typeDefault({ type: "string" }));
-            case "direct-number":
-              return setValue(typeDefault({ type: "number" }));
-            case "items":
-              return setValue(
-                typeDefault({ type: "array", items: { type: "any" } }),
-              );
-            case "shape":
-              return setValue({ shape: {} });
-            case "compute":
-              return setValue({ arguments: [], compute: { direct: "" } });
-            case "ref":
-              return setValue({ id: "", tags: [], parameters: {} });
-            default:
-              if (value.startsWith("parameter-")) {
-                const parameterIndex = parseInt(
-                  value.slice("parameter-".length),
-                );
-                return setValue({
-                  parameter: Object.keys(parameters)[parameterIndex],
-                });
-              }
-              throw new Error(`ev.target.value === ${ev.target.value}`);
-          }
-        }}
-      >
-        <option>---</option>
-        <option value="direct-boolean">boolean</option>
-        <option value="direct-string">string</option>
-        <option value="direct-number">number</option>
-        <option value="items">tuple</option>
-        <option value="shape">shape</option>
-        <option value="compute">function</option>
-        {Object.entries(parameters).map(([key], index) => (
-          <option value={`parameter-${index}`}>parameter: {key}</option>
-        ))}
-        <option value="ref">ref</option>
-      </select>
-    );
+    return <SelectValue {...{ setValue, parameters }} />;
   } else if (isWidgetDirect(value)) {
     switch (typeof value.direct) {
       case "boolean":
         return (
-          <KnownValueWidgetValue parameters={parameters} setValue={setValue}>
+          <KnownValueWidgetValue
+            parameters={parameters}
+            value={value}
+            setValue={setValue}
+          >
             <select
               value={value.direct.toString()}
-              onChange={(ev) => setValue({ direct: Boolean(ev.target.value) })}
+              onChange={(ev) => {
+                {
+                  setValue({ direct: JSON.parse(ev.target.value) });
+                }
+              }}
             >
               <option value="true">true</option>
               <option value="false">false</option>
@@ -139,21 +111,36 @@ export function ValueSlot({
         );
       case "number":
         return (
-          <KnownValueWidgetValue parameters={parameters} setValue={setValue}>
+          <KnownValueWidgetValue
+            parameters={parameters}
+            value={value}
+            setValue={setValue}
+          >
             <input
               type="text"
-              value={value.direct}
-              onChange={(ev) => setValue({ direct: Number(ev.target.value) })}
+              contentEditable
+              // key={value.direct.toString()}
+              defaultValue={value.direct}
+              onChange={(ev) => {
+                console.log("onChange");
+                setValue({
+                  direct: Number((ev.target as HTMLInputElement).value),
+                });
+              }}
             ></input>
           </KnownValueWidgetValue>
         );
       case "string":
         return (
-          <KnownValueWidgetValue parameters={parameters} setValue={setValue}>
+          <KnownValueWidgetValue
+            parameters={parameters}
+            value={value}
+            setValue={setValue}
+          >
             <input
               type="text"
-              value={value.direct}
               onChange={(ev) => setValue({ direct: ev.target.value })}
+              value={value.direct}
             ></input>
           </KnownValueWidgetValue>
         );
@@ -187,7 +174,11 @@ export function ValueSlot({
     }
     return (
       <KnownValueWidgetManyValue>
-        <KnownValueWidgetValue parameters={parameters} setValue={setValue}>
+        <KnownValueWidgetValue
+          parameters={parameters}
+          value={value}
+          setValue={setValue}
+        >
           tuple
         </KnownValueWidgetValue>
         <table>
@@ -245,7 +236,11 @@ export function ValueSlot({
     }
     return (
       <KnownValueWidgetManyValue>
-        <KnownValueWidgetValue parameters={parameters} setValue={setValue}>
+        <KnownValueWidgetValue
+          parameters={parameters}
+          value={value}
+          setValue={setValue}
+        >
           shape
         </KnownValueWidgetValue>
         <table>
@@ -269,70 +264,228 @@ export function ValueSlot({
       </KnownValueWidgetManyValue>
     );
   } else if (isWidgetComparison(value)) {
-    return <div></div>;
-  } else if (isWidgetCondition(value)) {
     return (
-      <KnownValueWidgetValue parameters={parameters} setValue={setValue}>
+      <>
+        {" "}
         <ValueSlot
           parameters={parameters}
-          type={{ type: "boolean" }}
-          value={value.condition}
-          setValue={(condition) => setValue({ ...value, condition })}
-        ></ValueSlot>
+          type={{ type: "any" }}
+          value={value.left}
+          setValue={(left) => setValue({ ...value, left })}
+        ></ValueSlot>{" "}
+        <select
+          onChange={(ev) =>
+            setValue({
+              ...value,
+              operator: ev.target.value as WidgetComparisonOperator,
+            })
+          }
+        >
+          <option value="equals">=</option>
+          <option value="greaterThan">&gt;</option>
+          <option value="greaterThanEquals">&gt;=</option>
+          <option value="lessThan">&lt;</option>
+          <option value="lessThanEquals">&lt;=</option>
+        </select>{" "}
+        <ValueSlot
+          parameters={parameters}
+          type={evalValueType(value.left, parameters)}
+          value={value.right}
+          setValue={(right) => setValue({ ...value, right })}
+        ></ValueSlot>{" "}
+      </>
+    );
+  } else if (isWidgetCondition(value)) {
+    return (
+      <>
+        {" "}
         <ValueSlot
           parameters={parameters}
           type={type}
           value={value.ifTrue}
           setValue={(ifTrue) => setValue({ ...value, ifTrue })}
-        ></ValueSlot>
+        ></ValueSlot>{" "}
+        if{" "}
         <ValueSlot
           parameters={parameters}
-          type={type}
-          value={value.ifFalse}
-          setValue={(ifFalse) => setValue({ ...value, ifFalse })}
-        ></ValueSlot>
-      </KnownValueWidgetValue>
+          type={{ type: "boolean" }}
+          value={value.condition}
+          setValue={(condition) => setValue({ ...value, condition })}
+        ></ValueSlot>{" "}
+        else{" "}
+        <div style={{ paddingLeft: "1em" }}>
+          <ValueSlot
+            parameters={parameters}
+            type={type}
+            value={value.ifFalse}
+            setValue={(ifFalse) => setValue({ ...value, ifFalse })}
+          ></ValueSlot>
+        </div>
+      </>
     );
   } else if (isWidgetParameter(value)) {
     return (
-      <KnownValueWidgetValue parameters={parameters} setValue={setValue}>
+      <KnownValueWidgetValue
+        parameters={parameters}
+        value={value}
+        setValue={setValue}
+      >
         {value.parameter}
       </KnownValueWidgetValue>
     );
   } else if (isWidgetProperty(value)) {
     return (
-      <div>
+      <>
+        {" "}
         <ValueSlot
           parameters={parameters}
-          type={{ type: "any" }}
+          type={type}
           value={value.target}
-          setValue={() => null}
-        />
-        .<select></select>
-      </div>
+          setValue={setValue}
+        />{" "}
+        <StateMachine defaultState={() => ({ state: "init" })}>
+          <StateContext.Consumer>
+            {({ setState }) => (
+              <ContextMenuOrigin
+                menu={
+                  <>
+                    <ContextMenuItem onClick={() => setValue(value.target)}>
+                      remove property
+                    </ContextMenuItem>
+                    <ContextMenuItem
+                      disabled={
+                        typeProperties(evalValueType(value.target, parameters))
+                          .length === 0
+                      }
+                      onClick={() =>
+                        setState({
+                          state: "change property",
+                          propertyKey: value.property,
+                        })
+                      }
+                    >
+                      change property
+                    </ContextMenuItem>
+                    <ContextMenuItem
+                      disabled={
+                        typeProperties(evalValueType(value, parameters))
+                          .length === 0
+                      }
+                      onClick={() =>
+                        setState({
+                          state: "add property",
+                          propertyKey: typeProperties(
+                            evalValueType(value, parameters),
+                          ),
+                        })
+                      }
+                    >
+                      add property
+                    </ContextMenuItem>
+                  </>
+                }
+              >
+                {value.property}{" "}
+                <State on={{ state: "change property" }}>
+                  <StateContext.Consumer>
+                    {({ state: { propertyKey }, assignState, reset }) => (
+                      <InputModal
+                        onOk={() => {
+                          reset();
+                          setValue({
+                            target: value.target,
+                            property: propertyKey,
+                          });
+                        }}
+                        onCancel={reset}
+                      >
+                        <select
+                          onChange={(ev) =>
+                            assignState({ propertyKey: ev.target.value })
+                          }
+                        >
+                          {typeProperties(
+                            evalValueType(value.target, parameters),
+                          ).map((prop) => (
+                            <option
+                              value={prop}
+                              selected={propertyKey === prop}
+                            >
+                              {prop}
+                            </option>
+                          ))}
+                        </select>
+                      </InputModal>
+                    )}
+                  </StateContext.Consumer>
+                </State>
+                <State on={{ state: "add property" }}>
+                  <StateContext.Consumer>
+                    {({ state: { propertyKey }, assignState, reset }) => (
+                      <InputModal
+                        onOk={() => {
+                          reset();
+                          setValue({
+                            target: value,
+                            property: propertyKey,
+                          });
+                        }}
+                        onCancel={reset}
+                      >
+                        <select
+                          onChange={(ev) =>
+                            assignState({ propertyKey: ev.target.value })
+                          }
+                        >
+                          {typeProperties(evalValueType(value, parameters)).map(
+                            (prop) => (
+                              <option
+                                value={prop}
+                                selected={propertyKey === prop}
+                              >
+                                {prop}
+                              </option>
+                            ),
+                          )}
+                        </select>
+                      </InputModal>
+                    )}
+                  </StateContext.Consumer>
+                </State>
+              </ContextMenuOrigin>
+            )}
+          </StateContext.Consumer>
+        </StateMachine>
+      </>
     );
   } else if (isWidgetMember(value)) {
     return (
-      <div>
-        <ValueSlot
-          parameters={parameters}
-          type={{ type: "any" }}
-          value={value.target}
-          setValue={() => null}
-        ></ValueSlot>
-        [
-        <ValueSlot
-          parameters={parameters}
-          type={{
-            type: "union",
-            left: { type: "string" },
-            right: { type: "string" },
-          }}
-          value={value.member}
-          setValue={() => null}
-        ></ValueSlot>
-        ]
-      </div>
+      <>
+        <ContextMenuOrigin
+          menu={
+            <>
+              <ContextMenuItem onClick={() => setValue(value.target)}>
+                remove member
+              </ContextMenuItem>
+            </>
+          }
+        >
+          member{" "}
+          <ValueSlot
+            parameters={parameters}
+            type={typeMemberType(evalValueType(value.target, parameters))}
+            value={value.member}
+            setValue={(member) => setValue({ ...value, member })}
+          ></ValueSlot>{" "}
+          of{" "}
+          <ValueSlot
+            parameters={parameters}
+            type={{ type: "any" }}
+            value={value.target}
+            setValue={(target) => setValue({ ...value, target })}
+          ></ValueSlot>{" "}
+        </ContextMenuOrigin>
+      </>
     );
   } else if (isWidgetMap(value)) {
     return (
@@ -369,7 +522,11 @@ export function ValueSlot({
     );
   } else if (isWidgetCompute(value)) {
     return (
-      <KnownValueWidgetValue parameters={parameters} setValue={setValue}>
+      <KnownValueWidgetValue
+        parameters={parameters}
+        value={value}
+        setValue={setValue}
+      >
         <div>arguments:</div>
         <div></div>
         <div>return:</div>
@@ -501,19 +658,148 @@ export function ValueSlot({
 //   return <button onClick={() => setValue()}>reference</button>;
 // };
 
-const KnownValueWidgetValue = ({ parameters, setValue, children }) => {
+const KnownValueWidgetValue = ({ parameters, value, setValue, children }) => {
   return (
     <>
-      <UnsetValue setValue={setValue}></UnsetValue>
-      {children}
+      <StateMachine defaultState={() => ({ state: "init" })}>
+        <StateContext.Consumer>
+          {({ setState }) => (
+            <ContextMenuOrigin
+              menu={
+                <>
+                  <ContextMenuItem
+                    onClick={() =>
+                      setState({ state: "change value", newValue: value })
+                    }
+                  >
+                    change value
+                  </ContextMenuItem>
+                  <ContextMenuItem
+                    onClick={() =>
+                      setValue({
+                        condition: {
+                          operator: "equals",
+                          left: { direct: true },
+                          right: { direct: false },
+                        },
+                        ifTrue: value,
+                        ifFalse: value,
+                      })
+                    }
+                  >
+                    add condition
+                  </ContextMenuItem>
+                  <ContextMenuItem
+                    disabled={
+                      typeProperties(evalValueType(value, parameters))
+                        .length === 0
+                    }
+                    onClick={() =>
+                      setState({
+                        state: "add property",
+                        propertyKey: typeProperties(
+                          evalValueType(value, parameters),
+                        ),
+                      })
+                    }
+                  >
+                    add property
+                  </ContextMenuItem>
+                  <ContextMenuItem
+                    disabled={
+                      typeMemberType(evalValueType(value, parameters)).type ===
+                      "void"
+                    }
+                    onClick={() =>
+                      setValue({
+                        target: value,
+                        member: typeDefault(
+                          typeMemberType(evalValueType(value, parameters)),
+                        ),
+                      })
+                    }
+                  >
+                    add member
+                  </ContextMenuItem>
+                  <ContextMenuItem
+                    disabled={
+                      !fulfillsType(
+                        { type: "array", items: { type: "any" } },
+                        evalValueType(value, parameters),
+                      ).same
+                    }
+                    onClick={() => {}}
+                  >
+                    map value
+                  </ContextMenuItem>
+                </>
+              }
+            >
+              {children}
+            </ContextMenuOrigin>
+          )}
+        </StateContext.Consumer>
+        <State on={{ state: "change value" }}>
+          <StateContext.Consumer>
+            {({ state: { newValue }, setState, assignState }) => (
+              <InputModal
+                onOk={() => {
+                  setState({ state: "init" });
+                  setValue(newValue);
+                }}
+                onCancel={() => setState({ state: "init" })}
+              >
+                <SelectValue
+                  value={newValue}
+                  setValue={(newValue) => assignState({ newValue })}
+                  parameters={parameters}
+                />
+              </InputModal>
+            )}
+          </StateContext.Consumer>
+        </State>
+        <State on={{ state: "add property" }}>
+          <StateContext.Consumer>
+            {({ state: { propertyKey }, assignState, reset }) => (
+              <InputModal
+                onOk={() => {
+                  reset();
+                  setValue({ target: value, property: propertyKey });
+                }}
+                onCancel={reset}
+              >
+                <select
+                  onChange={(ev) =>
+                    assignState({ propertyKey: ev.target.value })
+                  }
+                >
+                  {typeProperties(evalValueType(value, parameters)).map(
+                    (prop) => (
+                      <option value={prop} selected={propertyKey === prop}>
+                        {prop}
+                      </option>
+                    ),
+                  )}
+                </select>
+              </InputModal>
+            )}
+          </StateContext.Consumer>
+        </State>
+      </StateMachine>
     </>
   );
 };
 
-const UnsetValue = ({ setValue }: { setValue: SetWidgetValue }) => {
-  return (
-    <button onClick={() => setValue(undefined as any)}>change value</button>
-  );
+const UnsetValue = ({
+  value,
+  setValue,
+  parameters,
+}: {
+  value?: WidgetValue;
+  setValue: SetWidgetValue;
+  parameters: {};
+}) => {
+  return <></>;
 };
 
 const ReplaceWithParameter = ({
@@ -592,13 +878,89 @@ type ValueSlotWidgetRefState =
   | ValueSlotWidgetRefInitState
   | ValueSlotWidgetRefChooseWidgetState;
 
+function SelectValue({
+  value,
+  setValue,
+  parameters,
+}: {
+  value?: WidgetValue;
+  setValue: (value: WidgetValue) => void;
+  parameters: {};
+}) {
+  return (
+    <select
+      onChange={(ev) => {
+        const value = ev.target.value;
+        switch (ev.target.value) {
+          case "direct-boolean":
+            return setValue(typeDefault({ type: "boolean" }));
+          case "direct-string":
+            return setValue(typeDefault({ type: "string" }));
+          case "direct-number":
+            return setValue(typeDefault({ type: "number" }));
+          case "items":
+            return setValue(
+              typeDefault({ type: "array", items: { type: "any" } }),
+            );
+          case "shape":
+            return setValue({ shape: {} });
+          case "compute":
+            return setValue({ arguments: [], compute: { direct: "" } });
+          case "ref":
+            return setValue({ id: "", tags: [], parameters: {} });
+          default:
+            if (value.startsWith("parameter-")) {
+              const parameterIndex = parseInt(value.slice("parameter-".length));
+              return setValue({
+                parameter: Object.keys(parameters)[parameterIndex],
+              });
+            }
+            throw new Error(`ev.target.value === ${ev.target.value}`);
+        }
+      }}
+    >
+      <option value="direct-boolean" selected={value && isWidgetBoolean(value)}>
+        boolean
+      </option>
+      <option value="direct-string" selected={value && isWidgetString(value)}>
+        string
+      </option>
+      <option value="direct-number" selected={value && isWidgetNumber(value)}>
+        number
+      </option>
+      <option value="items" selected={value && isWidgetTuple(value)}>
+        tuple
+      </option>
+      <option value="shape" selected={value && isWidgetObject(value)}>
+        shape
+      </option>
+      <option value="compute" selected={value && isWidgetCompute(value)}>
+        function
+      </option>
+      {Object.entries(parameters).map(([key], index) => (
+        <option
+          value={`parameter-${index}`}
+          selected={
+            value && isWidgetParameter(value) && value.parameter === key
+          }
+        >
+          parameter: {key}
+        </option>
+      ))}
+      <option value="ref" selected={value && isWidgetRef(value)}>
+        ref
+      </option>
+    </select>
+  );
+}
+
 function ValueSlotWidgetRef({
   parameters,
   setValue,
   value,
   def,
 }: {
-  parameters: {};
+  parameters: { [key: string]: WidgetType };
   setValue: (value: WidgetValue) => void;
   value: WidgetRef;
   def: WidgetDefinition;
@@ -608,14 +970,19 @@ function ValueSlotWidgetRef({
   const [state, setState] = useState(
     () => ({ state: "init" } as ValueSlotWidgetRefState),
   );
-  console.log("state", state);
   return (
-    <KnownValueWidgetValue parameters={parameters} setValue={setValue}>
-      <button
-        onClick={() => setState({ state: "chooseWidget", tags: value.tags })}
-      >
-        choose widget
-      </button>
+    <KnownValueWidgetValue
+      parameters={parameters}
+      value={value}
+      setValue={setValue}
+    >
+      <div>
+        <button
+          onClick={() => setState({ state: "chooseWidget", tags: value.tags })}
+        >
+          choose widget
+        </button>
+      </div>
       {state.state === "chooseWidget" ? (
         <InputModal
           onOk={() => {
@@ -632,12 +999,7 @@ function ValueSlotWidgetRef({
                 setTags={(tags) => setState({ state: "chooseWidget", tags })}
               ></WidgetTagsInnerEditor>
             </div>
-            <div>
-              current widget:{" "}
-              {def
-                ? def.id.slice(def.id.length - 8, def.id.length)
-                : "not found"}
-            </div>
+            <div>current widget: {def ? widgetName(def) : "not found"}</div>
             <div>results</div>
             <div>
               {database.find(state.tags).map((def) => (
@@ -650,7 +1012,7 @@ function ValueSlotWidgetRef({
                   >
                     select
                   </button>
-                  {def.id}
+                  {widgetName(def)}
                 </div>
               ))}
             </div>
@@ -660,57 +1022,110 @@ function ValueSlotWidgetRef({
       <div>
         widget:{" "}
         {def ? (
-          <Link to={`/widget/${def.id}/edit`}>
-            {def.id.slice(def.id.length - 8, def.id.length)}
-          </Link>
+          <Link to={`/widget/${def.id}`}>{widgetName(def)}</Link>
         ) : (
           "not found"
         )}
       </div>
       <div>paramters:</div>
-      <div>
-        {Object.entries(value.parameters).map(([key, param]) => (
-          <div>
-            {key}:{" "}
-            <ValueSlot
-              parameters={parameters}
-              type={{ type: "any" }}
-              value={param}
-              setValue={(param) =>
-                setValue({
-                  id: value.id,
-                  tags: value.tags,
-                  parameters: { ...value.parameters, [key]: param },
-                })
-              }
-            ></ValueSlot>
-          </div>
-        ))}
-        <div>
-          <select onChange={(ev) => setNewParamKey(ev.target.value)}>
-            <option>---</option>
-            {Object.keys(def?.parameters ?? {})
-              .filter((key) => !(key in value.parameters))
-              .map((key) => (
-                <option value={key}>{key}</option>
-              ))}
-          </select>
-          <button
-            onClick={() =>
-              setValue({
-                id: value.id,
-                tags: value.tags,
-                parameters: {
-                  ...value.parameters,
-                  [newParamKey]: undefined as any,
-                },
-              })
-            }
-          >
-            add
-          </button>
-        </div>
-      </div>
+      <table>
+        {Object.entries(value?.parameters ?? {}).map(
+          ([key, param], index, entries) => (
+            <tr>
+              <td valign="top">
+                <OrderButtonBar.Props
+                  container={value?.parameters ?? {}}
+                  setContainer={(parameters) =>
+                    setValue({ ...value, parameters })
+                  }
+                  index={index}
+                  length={entries.length}
+                />{" "}
+                {key}
+              </td>
+              <td>
+                <div></div>
+                <div>
+                  <ValueSlot
+                    parameters={parameters}
+                    type={{ type: "any" }}
+                    value={param}
+                    setValue={(param) =>
+                      setValue({
+                        id: value.id,
+                        tags: value.tags,
+                        parameters: { ...value?.parameters, [key]: param },
+                      })
+                    }
+                  ></ValueSlot>
+                </div>
+              </td>
+            </tr>
+          ),
+        )}
+        <tr>
+          <td>
+            <StateMachine defaultState={() => ({ state: "init" })}>
+              <StateContext.Consumer>
+                {({ setState }) => (
+                  <button
+                    onClick={() =>
+                      setState({
+                        state: "add",
+                        newParamKey: Object.keys(def?.parameters ?? {}).filter(
+                          (key) => !(key in (value?.parameters ?? {})),
+                        )[0],
+                      })
+                    }
+                    disabled={
+                      Object.keys(def?.parameters ?? {}).filter(
+                        (key) => !(key in (value?.parameters ?? {})),
+                      ).length === 0
+                    }
+                  >
+                    add
+                  </button>
+                )}
+              </StateContext.Consumer>
+              <State on={{ state: "add" }}>
+                <StateContext.Consumer>
+                  {({ state: { newParamKey }, setState, assignState }) => (
+                    <InputModal
+                      onOk={() => {
+                        setState({ state: "init" });
+                        setValue({
+                          id: value.id,
+                          tags: value.tags,
+                          parameters: {
+                            ...value?.parameters,
+                            [newParamKey]: typeDefault(
+                              def?.parameters[newParamKey],
+                            ),
+                          },
+                        });
+                      }}
+                      onCancel={() => setState({ state: "init" })}
+                    >
+                      <select
+                        onChange={(ev) =>
+                          assignState({ newParamKey: ev.target.value })
+                        }
+                      >
+                        {Object.keys(def?.parameters ?? {})
+                          .filter((key) => !(key in value.parameters))
+                          .map((key) => (
+                            <option value={key}>{key}</option>
+                          ))}
+                      </select>
+                    </InputModal>
+                  )}
+                </StateContext.Consumer>
+              </State>
+            </StateMachine>
+          </td>
+          <td></td>
+        </tr>
+      </table>
     </KnownValueWidgetValue>
   );
 }

@@ -1,5 +1,8 @@
 import React, { useState } from "react";
 import { WidgetType } from "../../../..";
+import { InputModal } from "./InputModal";
+import { OrderButtonBar } from "./OrderButtonBar";
+import { State, StateContext, StateMachine } from "./StateMachine";
 import { TypeSlot } from "./TypeSlot";
 
 type SetWidgetParameters = (parameters: { [key: string]: WidgetType }) => void;
@@ -31,8 +34,8 @@ function TypeParameters(
             TypeParametersRow(parameters, setParameters, index, key, item),
           )}
           <tr>
-            <td></td>
             <td>{TypeParametersAddParam(setParameters, parameters)}</td>
+            <td></td>
           </tr>
         </table>
       </div>
@@ -44,21 +47,41 @@ function TypeParametersAddParam(
   setParameters: SetWidgetParameters,
   parameters: WidgetParameters,
 ) {
-  const [newKeyName, setNewKeyName] = useState("");
   return (
     <div>
-      <input
-        type="text"
-        value={newKeyName}
-        onChange={(ev) => setNewKeyName(ev.target.value)}
-      ></input>
-      <button
-        onClick={() =>
-          setParameters({ ...parameters, [newKeyName]: { type: "any" } })
-        }
-      >
-        add
-      </button>
+      <StateMachine defaultState={() => ({ state: "init" })}>
+        <StateContext.Consumer>
+          {({ setState }) => (
+            <button onClick={() => setState({ state: "add", newKeyName: "" })}>
+              add
+            </button>
+          )}
+        </StateContext.Consumer>
+        <State on={{ state: "add" }}>
+          <StateContext.Consumer>
+            {({ state: { newKeyName }, setState, assignState }) => (
+              <InputModal
+                onOk={() => {
+                  setState({ state: "init" });
+                  setParameters({
+                    ...parameters,
+                    [newKeyName]: { type: "any" },
+                  });
+                }}
+                onCancel={() => setState({ state: "init" })}
+              >
+                <input
+                  type="text"
+                  value={newKeyName}
+                  onChange={(ev) =>
+                    assignState({ newKeyName: ev.target.value })
+                  }
+                ></input>
+              </InputModal>
+            )}
+          </StateContext.Consumer>
+        </State>
+      </StateMachine>
     </div>
   );
 }
@@ -72,11 +95,16 @@ function TypeParametersRow(
 ): JSX.Element {
   return (
     <tr>
-      <td>{key}</td>
+      <td valign="top">
+        <OrderButtonBar.Props
+          container={parameters}
+          setContainer={setParameters}
+          index={index}
+          length={Object.keys(parameters).length}
+        />{" "}
+        {key}
+      </td>
       <td>
-        <button onClick={() => setParameters(omitKey(parameters, key))}>
-          remove
-        </button>
         <TypeSlot
           type={item}
           setType={(indexType) =>

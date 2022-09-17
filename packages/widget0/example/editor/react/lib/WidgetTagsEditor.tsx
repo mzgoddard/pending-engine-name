@@ -1,5 +1,7 @@
 import React from "react";
 import { WidgetTag, WidgetTagArray } from "../../../../widget-value";
+import { InputModal } from "./InputModal";
+import { State, StateContext, StateMachine } from "./StateMachine";
 import { WidgetAddTagEditor } from "./WidgetAddTagEditor";
 import { WidgetTagsInnerEditor } from "./WidgetTagsInnerEditor";
 
@@ -14,10 +16,36 @@ export const WidgetTagsEditor = ({
     <details open>
       <summary>tags</summary>
       <div>
-        <WidgetTagsInnerEditor
-          tags={tags}
-          setTags={setTags}
-        ></WidgetTagsInnerEditor>
+        <StateMachine defaultState={() => ({ state: "init" })}>
+          <StateContext.Consumer>
+            {({ setState }) => (
+              <button onClick={() => setState({ state: "edit", tags })}>
+                edit
+              </button>
+            )}
+          </StateContext.Consumer>
+          {tags.map((tag) => (
+            <div>{tag.join(" ")}</div>
+          ))}
+          <State on={{ state: "edit" }}>
+            <StateContext.Consumer>
+              {({ state: { tags, ...state }, setState }) => (
+                <InputModal
+                  onOk={() => {
+                    setState({ state: "init" });
+                    setTags(tags);
+                  }}
+                  onCancel={() => setState({ state: "init" })}
+                >
+                  <WidgetTagsInnerEditor
+                    tags={tags}
+                    setTags={(tags) => setState({ ...state, tags })}
+                  ></WidgetTagsInnerEditor>
+                </InputModal>
+              )}
+            </StateContext.Consumer>
+          </State>
+        </StateMachine>
       </div>
     </details>
   );

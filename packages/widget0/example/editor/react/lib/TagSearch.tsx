@@ -18,8 +18,13 @@ import {
   WidgetTagSearchArray,
 } from "../../database";
 import { useObservable } from "./useObservable";
+import { widgetName } from "./widgetName";
 
-export const TagSearch = () => {
+export const TagSearch = ({
+  linkPrefix: prefix = "widget",
+}: {
+  linkPrefix?: string;
+}) => {
   const database = useDatabase();
   const [newTagItem, setNewTagItem] = useState("");
   const [tags, setTags] = useState([] as WidgetTagSearchArray);
@@ -48,7 +53,7 @@ export const TagSearch = () => {
       <TagSearchInput
         {...{ tags, setTags, inputTarget$, suggestions$, newTagItem }}
       />
-      <TagSearchResults results={results} />
+      <TagSearchResults prefix={prefix} results={results} />
     </>
   );
 };
@@ -100,7 +105,13 @@ function TagSearchInput({
   );
 }
 
-function TagSearchResults({ results }: { results: WidgetDefinition[] }) {
+function TagSearchResults({
+  prefix,
+  results,
+}: {
+  prefix: string;
+  results: WidgetDefinition[];
+}) {
   return (
     <>
       <div>results</div>
@@ -108,17 +119,11 @@ function TagSearchResults({ results }: { results: WidgetDefinition[] }) {
         {results.map((def) => (
           <tr>
             <td>
-              <Link to={`/widget/${def.id}/edit`}>
+              <Link to={`${prefix}/${def.id}`}>
                 <span style={{ fontFamily: "monospace" }}>{def.id}</span>
               </Link>
             </td>
-            <td>
-              {def.tags.map((tag) => (
-                <>
-                  <span>{tag.join(" ")}</span>{" "}
-                </>
-              ))}
-            </td>
+            <td>{widgetName(def)}</td>
           </tr>
         ))}
       </table>

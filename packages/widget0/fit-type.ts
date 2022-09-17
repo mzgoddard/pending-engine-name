@@ -366,8 +366,16 @@ type WidgetMemberType =
   | { type: "number" | "string" }
   | { type: "union"; left: WidgetMemberType; right: WidgetMemberType };
 
-export function typeMemberType(type: WidgetType): WidgetMemberType {
+export function typeMemberType(
+  type: WidgetType,
+): WidgetMemberType | { type: "void" } {
   switch (type.type) {
+    case "boolean":
+    case "literal":
+    case "number":
+    case "string":
+    case "primitive":
+      return { type: "void" };
     case "array":
       return { type: "number" };
     case "dict":

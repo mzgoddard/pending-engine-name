@@ -139,6 +139,20 @@ export function isWidgetDirect(value: WidgetValue): value is WidgetDirectValue {
   return "direct" in value;
 }
 
+export function isWidgetBoolean(
+  value: WidgetValue,
+): value is WidgetDirectValue {
+  return isWidgetDirect(value) && typeof value.direct === "boolean";
+}
+
+export function isWidgetNumber(value: WidgetValue): value is WidgetDirectValue {
+  return isWidgetDirect(value) && typeof value.direct === "number";
+}
+
+export function isWidgetString(value: WidgetValue): value is WidgetDirectValue {
+  return isWidgetDirect(value) && typeof value.direct === "string";
+}
+
 export function isWidgetTuple(value: WidgetValue): value is WidgetTupleValue {
   return "items" in value;
 }

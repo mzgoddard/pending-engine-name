@@ -39,6 +39,27 @@ export interface WidgetTypeParameters {
   [key: string]: WidgetType;
 }
 
+export interface WidgetIdType {
+  readonly type: "id";
+  readonly id: string;
+  readonly parameter: string;
+  readonly tags?: WidgetTagArray;
+  readonly comment?: string;
+}
+
+export interface WidgetSelfType {
+  readonly type: "self";
+  readonly parameter: string;
+  readonly comment?: string;
+}
+
+export interface WidgetPathType {
+  readonly type: "path";
+  readonly target: WidgetIdType | WidgetSelfType | WidgetPathType;
+  readonly path: string;
+  readonly comment?: string;
+}
+
 export interface WidgetClosureType {
   readonly type: "closure";
   readonly parameters: WidgetTypeParameters;
@@ -70,6 +91,11 @@ export interface WidgetUnionType {
   readonly comment?: string;
 }
 
+export interface WidgetInferType {
+  readonly type: "infer";
+  readonly comment?: string;
+}
+
 export type WidgetType =
   | WidgetPrimitiveType
   | WidgetLiteralType
@@ -79,6 +105,10 @@ export type WidgetType =
   | WidgetObjectType
   | WidgetFunctionType
   | WidgetClosureType
+  | WidgetIdType
+  | WidgetSelfType
+  | WidgetPathType
   | WidgetVoidType
   | WidgetUnionType
+  | WidgetInferType
   | WidgetAnyType;
